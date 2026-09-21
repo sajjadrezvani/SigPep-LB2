@@ -28,7 +28,7 @@ To prevent homology bias and avoid data leakage between partitions, sequence red
 * **Outputs**:
   * Clustered mapping tables (`pos_clustered_cluster.tsv`, `neg_clustered_cluster.tsv`) tracking cluster membership.
   * Non-redundant representative sequence databases (`pos_clustered_rep_seq.fasta`, `neg_clustered_rep_seq.fasta`) used for downstream train/benchmark partitioning and 5-fold cross-validation.
-## Dataset Partitioning & 5-Fold Cross-Validation
+
 
 Following sequence redundancy reduction, representative sequences were split into training and benchmarking subsets to ensure unbiased model training and validation.
 
