@@ -15,18 +15,18 @@ A computational study of **signal peptide prediction in eukaryotic proteins**, c
 > Positive: 2972 retrieved → 2961 final
 > 
 > Negative: 20975 retrieved(non-conservative) → 19595 final(conservative filter)
-## Data preparation
-### Reduce redundancy & build splits
+### Data preparation
+**Reduce redundancy & build splits**
 > Redundancy Reduction (MMseqs2): Connected-component clustering (--cluster-mode 1) at >=30% sequence identity and  >=40% bidirectional coverage (--cov-mode 0).
 > Positive Dataset: Reduced to 1,061 non-redundant cluster representatives (from 849 training + 212 benchmarking).
 
 > Negative Dataset: Reduced to 8,771 non-redundant cluster representatives (from 7,017 training + 1,754 benchmarking).
 >
-### 80/20 Split:Training Set (80%):
+**80/20 Split:Training Set (80%):**
 > Positive: 849 sequences
 > Negative: 7,017 sequences
 > Total: 7,866 sequences
-### Benchmarking Set (20%):
+**Benchmarking Set (20%)**
 
 Positive: 212 sequences
 
@@ -34,7 +34,7 @@ Negative: 1,754 sequences
 
 Total: 1,966 sequences
 
-### Stratified 5-Fold Cross-Validation (Training Set):
+**Stratified 5-Fold Cross-Validation (Training Set):**
 > Negative-to-Positive ratio preserved across all folds at $\approx 8.26 : 1$.
 > Fold 0: 1,404 Negative | 170 Positive (Total: 1,574)
 > Fold 1: 1,404 Negative | 170 Positive (Total: 1,574)
