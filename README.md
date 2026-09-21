@@ -65,6 +65,7 @@ LB2/
 ├── results/
 │
 └── docs/
+'''
 
 ---
 
@@ -129,24 +130,3 @@ Negative examples satisfy:
 The datasets will be stored in both **TSV** and **FASTA** formats.
 
 ---
-
-## 🗂️ Repository Structure
-
-```text
-LB2/
-│
-├── README.md
-├── .gitignore
-│
-├── src/
-│   └── collect_uniprot_data.py
-│
-├── data/
-│   ├── raw/
-│   └── processed/
-│
-├── notebooks/
-│
-├── results/
-│
-└── docs/
