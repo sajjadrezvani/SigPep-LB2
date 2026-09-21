@@ -42,6 +42,30 @@ Following sequence redundancy reduction, representative sequences were split int
 * **Internal Folds**: The 80% training pool was divided into 5 balanced folds (folds `0` through `4`).
 * **Preserving Class Ratio**: Fold assignment was conducted independently across positive and negative training records using round-robin modulo indexing (`idx % 5`), ensuring each fold maintained the overarching class balance (~1:8.26 positive-to-negative ratio).
 * **Fold Tracking**: Every protein's subset assignment was explicitly recorded in a `CV_Fold` column across output tables (`positive_train_5fold.tsv`, `negative_train_5fold.tsv`, and `training_5fold_cv_master.tsv`) to ensure identical, reproducible cross-validation partitions across all downstream models.
+
+---
+
+## 🗂️ Repository Structure
+
+```text
+LB2/
+│
+├── README.md
+├── .gitignore
+│
+├── src/
+│   └── collect_uniprot_data.py
+│
+├── data/
+│   ├── raw/
+│   └── processed/
+│
+├── notebooks/
+│
+├── results/
+│
+└── docs/
+
 ---
 
 ## 📌 Project Overview
