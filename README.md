@@ -14,10 +14,10 @@ A computational study of **signal peptide prediction in eukaryotic proteins**, c
 ### data collection
 > Positive: 2972 retrieved → 2961 final
 > 
-> Negative: 20975 retrieved → 20975 final
+> Negative: 20975 retrieved(non-conservative) → 19595 final(conservative filter)
 ## Data preparation
 ### Reduce redundancy & build splits
-### Redundancy Reduction (MMseqs2): Connected-component clustering (--cluster-mode 1) at $\ge 30\%$ sequence identity and $\ge 40\%$ bidirectional coverage (--cov-mode 0).
+> Redundancy Reduction (MMseqs2): Connected-component clustering (--cluster-mode 1) at >=30% sequence identity and  >=40% bidirectional coverage (--cov-mode 0).
 > Positive Dataset: Reduced to 1,061 non-redundant cluster representatives (from 849 training + 212 benchmarking).
 
 > Negative Dataset: Reduced to 8,771 non-redundant cluster representatives (from 7,017 training + 1,754 benchmarking).
