@@ -6,7 +6,7 @@ A computational study of **signal peptide prediction in eukaryotic proteins**, c
 
 
 ---
-## 📌 Progress update
+## ✅ Progress update
 
 ### setup
 - setup VM, VPN, and github 
@@ -131,3 +131,7 @@ Negative examples satisfy:
 The datasets will be stored in both **TSV** and **FASTA** formats.
 
 ---
+
+## 🚀 LINKS
+
+[DeepSig_connected](https://www.connectedpapers.com/main/f5655e2d2c16774c33b17e5a151352a8dfd82255/DeepSig%3A-deep-learning-improves-signal-peptide-detection-in-proteins/graph)
