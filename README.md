@@ -70,6 +70,14 @@ LB2/
 
 ---
 
+## 👵🏻 Plots
+
+Plot1: 
+![alt](https://github.com/sajjadrezvani/SigPep-LB2/blob/main/results/Rep%20seq%20plot.png)
+
+
+---
+
 ## 📌 Project Overview
 
 Signal peptides (SPs) are short N-terminal amino-acid sequences that direct newly synthesized proteins into the **secretory pathway**, enabling their transport through the endoplasmic reticulum (ER), Golgi apparatus, and ultimately to destinations such as the cell membrane or extracellular space.
