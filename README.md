@@ -46,118 +46,7 @@ Total: 1,966 sequences
 
 ---
 
-## 🗂️ Repository Structure
-
-```text
-LB2/
-│
-├── README.md
-├── .gitignore
-│
-├── src/
-│   └── collect_uniprot_data.py
-│
-├── data/
-│   ├── raw/
-│   └── processed/
-│
-├── notebooks/
-│
-├── results/
-│
-└── docs/
-```
-
----
-
-## 👵🏻 Plots
-
-Plot1: 
-![alt](https://github.com/sajjadrezvani/SigPep-LB2/blob/main/results/Rep%20seq%20plot.png)
-
-
----
-
-## 📌 Project Overview
-
-Signal peptides (SPs) are short N-terminal amino-acid sequences that direct newly synthesized proteins into the **secretory pathway**, enabling their transport through the endoplasmic reticulum (ER), Golgi apparatus, and ultimately to destinations such as the cell membrane or extracellular space.
-
-Predicting signal peptides from protein sequences is an important problem in **protein function prediction, subcellular localization, and genome/proteome annotation**.
-
-This project investigates different computational approaches for identifying signal peptides and their cleavage sites, starting from classical statistical methods and progressing toward machine-learning approaches.
-
-> **Main question:**  
-> Can we reliably distinguish proteins containing signal peptides from proteins without signal peptides using sequence information?
-
----
-
-## 🎯 Objectives
-
-- Collect and curate a high-quality **eukaryotic protein dataset** from UniProtKB.
-- Construct positive and negative datasets for signal peptide prediction.
-- Analyze sequence and dataset characteristics.
-- Extract informative sequence features.
-- Implement the **von Heijne weight-matrix approach** for signal peptide/cleavage-site prediction.
-- Implement a **feature-based Support Vector Machine (SVM)** approach.
-- Evaluate the models using cross-validation and an independent/blind test set.
-- Compare the approaches and analyze their strengths and limitations.
-- Discuss more recent approaches to signal peptide prediction.
-
-The project therefore covers both:
-1. **Signal peptide detection** — does the protein contain a signal peptide?
-2. **Cleavage-site prediction** — where is the signal peptide cleaved?
-
----
-
-## 🧪 Dataset
-
-Protein sequences are collected from **UniProtKB** and restricted to **eukaryotic proteins**.
-
-### Positive Dataset
-
-Positive examples satisfy the project criteria, including:
-
-- Reviewed UniProt entries
-- No protein fragments
-- Experimental evidence for a signal peptide
-- Protein-level evidence for protein existence
-- Protein length ≥ 40 amino acids
-- Signal peptide length > 13 amino acids
-- Known signal peptide cleavage site
-
-### Negative Dataset
-
-Negative examples satisfy:
-
-- Reviewed UniProt entries
-- No protein fragments
-- Protein-level evidence for protein existence
-- Protein length ≥ 40 amino acids
-- No annotated signal peptide at any evidence level
-- Experimental localization to selected non-secretory compartments
-
-The datasets will be stored in both **TSV** and **FASTA** formats.
-
----
-### Data analysis
-
-Exploratory data analysis was performed on the non-redundant datasets and on the final training and benchmark sets.
-
-The analysis included:
-
-- Amino-acid composition of signal peptides.
-- Comparison with reviewed eukaryotic signal peptides from SwissProt.
-- Protein-length distributions.
-- Positive vs negative protein-length comparison.
-- Signal-peptide-length distributions.
-- Taxonomic composition at kingdom level.
-- Most represented species in the training and benchmark sets.
-- Sequence-logo analysis around the signal-peptide cleavage site.
-- Comparison of training and benchmark distributions to evaluate whether the 80/20 split preserved the main characteristics of the dataset.
-
----
-
-## 📊 Data Analysis
+## 📊 Data Analysis and Plots
 
 ### Amino-acid composition
 
@@ -253,6 +142,20 @@ The major species represented in both datasets include **Homo sapiens**, **Sacch
 
 ![Benchmark Top 10 species](results/benchmark_species.png)
 
+
+
+---
+
+## Other Plots
+
+Plot1: 
+![alt](https://github.com/sajjadrezvani/SigPep-LB2/blob/main/results/Rep%20seq%20plot.png)
+
+Plot1: 
+![alt](https://github.com/sajjadrezvani/SigPep-LB2/blob/main/results/cluster%20population%20plot.png)
+
+---
+
 ---
 
 ### Analysis summary
@@ -269,6 +172,112 @@ The exploratory analysis shows that:
 - Sequence logos were generated around the cleavage site to investigate positional amino-acid preferences in the training and benchmark positive datasets.
 
 Overall, the training and benchmark datasets preserve the main sequence and taxonomic characteristics of the non-redundant dataset and can be used for the subsequent feature extraction, model training, cross-validation, and benchmark evaluation stages.
+
+
+## 🗂️ Repository Structure
+
+```text
+LB2/
+│
+├── README.md
+├── .gitignore
+│
+├── src/
+│   └── collect_uniprot_data.py
+│
+├── data/
+│   ├── raw/
+│   └── processed/
+│
+├── notebooks/
+│
+├── results/
+│
+└── docs/
+```
+
+
+---
+
+## 📌 Project Overview
+
+Signal peptides (SPs) are short N-terminal amino-acid sequences that direct newly synthesized proteins into the **secretory pathway**, enabling their transport through the endoplasmic reticulum (ER), Golgi apparatus, and ultimately to destinations such as the cell membrane or extracellular space.
+
+Predicting signal peptides from protein sequences is an important problem in **protein function prediction, subcellular localization, and genome/proteome annotation**.
+
+This project investigates different computational approaches for identifying signal peptides and their cleavage sites, starting from classical statistical methods and progressing toward machine-learning approaches.
+
+> **Main question:**  
+> Can we reliably distinguish proteins containing signal peptides from proteins without signal peptides using sequence information?
+
+---
+
+## 🎯 Objectives
+
+- Collect and curate a high-quality **eukaryotic protein dataset** from UniProtKB.
+- Construct positive and negative datasets for signal peptide prediction.
+- Analyze sequence and dataset characteristics.
+- Extract informative sequence features.
+- Implement the **von Heijne weight-matrix approach** for signal peptide/cleavage-site prediction.
+- Implement a **feature-based Support Vector Machine (SVM)** approach.
+- Evaluate the models using cross-validation and an independent/blind test set.
+- Compare the approaches and analyze their strengths and limitations.
+- Discuss more recent approaches to signal peptide prediction.
+
+The project therefore covers both:
+1. **Signal peptide detection** — does the protein contain a signal peptide?
+2. **Cleavage-site prediction** — where is the signal peptide cleaved?
+
+---
+
+## 🧪 Dataset
+
+Protein sequences are collected from **UniProtKB** and restricted to **eukaryotic proteins**.
+
+### Positive Dataset
+
+Positive examples satisfy the project criteria, including:
+
+- Reviewed UniProt entries
+- No protein fragments
+- Experimental evidence for a signal peptide
+- Protein-level evidence for protein existence
+- Protein length ≥ 40 amino acids
+- Signal peptide length > 13 amino acids
+- Known signal peptide cleavage site
+
+### Negative Dataset
+
+Negative examples satisfy:
+
+- Reviewed UniProt entries
+- No protein fragments
+- Protein-level evidence for protein existence
+- Protein length ≥ 40 amino acids
+- No annotated signal peptide at any evidence level
+- Experimental localization to selected non-secretory compartments
+
+The datasets will be stored in both **TSV** and **FASTA** formats.
+
+---
+### Data analysis
+
+Exploratory data analysis was performed on the non-redundant datasets and on the final training and benchmark sets.
+
+The analysis included:
+
+- Amino-acid composition of signal peptides.
+- Comparison with reviewed eukaryotic signal peptides from SwissProt.
+- Protein-length distributions.
+- Positive vs negative protein-length comparison.
+- Signal-peptide-length distributions.
+- Taxonomic composition at kingdom level.
+- Most represented species in the training and benchmark sets.
+- Sequence-logo analysis around the signal-peptide cleavage site.
+- Comparison of training and benchmark distributions to evaluate whether the 80/20 split preserved the main characteristics of the dataset.
+
+---
 ## 🚀 LINKS
+
 
 [DeepSig_connected](https://www.connectedpapers.com/main/f5655e2d2c16774c33b17e5a151352a8dfd82255/DeepSig%3A-deep-learning-improves-signal-peptide-detection-in-proteins/graph)
