@@ -197,23 +197,28 @@ The two distributions strongly overlap, with most signal peptides concentrated a
 
 ### Cleavage-site sequence logos
 
-Sequence logos were generated for positive proteins to examine amino-acid preferences around the annotated signal-peptide cleavage site.
+Sequence logos were generated for positive proteins to visualize amino-acid preferences around the annotated signal-peptide cleavage site.
 
-For each positive sequence, a window around the cleavage site was extracted covering:
+For each positive sequence, a window around the cleavage site was extracted, covering:
 
-- **−13 to −1:** residues upstream of the cleavage site
-- **+1 to +2:** residues downstream of the cleavage site
+- **−13 to −1**: residues upstream of the cleavage site  
+- **+1 to +2**: residues downstream of the cleavage site  
 
-Separate sequence logos were generated for the training and benchmark sets to compare positional amino-acid patterns around the cleavage region.
+Separate sequence logos were generated for the **training** and **benchmark** sets to compare positional amino-acid patterns around the cleavage region.
+
+Both datasets show very similar patterns. **Leucine (L)** is strongly enriched in the upstream region, together with other hydrophobic residues such as **Valine (V), Isoleucine (I), and Alanine (A)**. This is expected because the central region of a signal peptide forms a **hydrophobic core**, which is important for recognition by the signal-recognition machinery and interaction with the ER membrane/translocation system.
+
+Close to the cleavage site, **Alanine (A)** is particularly enriched, while **Glycine (G)** and **Serine (S)** are also common. These residues are small and mostly uncharged, making them favorable around the cleavage site where the signal peptidase requires relatively small residues for efficient recognition and cleavage. This pattern is consistent with the classical **−3, −1 rule**, in which small neutral residues are preferred near the signal-peptidase cleavage site.
+
+The similarity between the training and benchmark logos also indicates that the characteristic cleavage-site sequence pattern was preserved after the dataset split.
 
 #### Training set
 
-[View training sequence logo](results/logo_training.pdf)
+![Training sequence logo](results/logo_training.png)
 
 #### Benchmark set
 
-[View benchmark sequence logo](results/logo_bench.pdf)
-
+![Benchmark sequence logo](results/logo_bench.png)
 ---
 
 ### Taxonomic distribution
