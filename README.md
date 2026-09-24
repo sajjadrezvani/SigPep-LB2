@@ -214,11 +214,11 @@ The similarity between the training and benchmark logos also indicates that the 
 
 #### Training set
 
-![Training sequence logo](results/logo_training.png)
+![Training sequence logo](results/logo_training.jpg)
 
 #### Benchmark set
 
-![Benchmark sequence logo](results/logo_bench.png)
+![Benchmark sequence logo](results/logo_bench.jpg)
 ---
 
 ### Taxonomic distribution
