@@ -1,4 +1,4 @@
-# Signal Peptide Prediction: Comparative Review of Five Key Papers
+# SP Prediction: Comparative Review of Five Key Papers by Sajjad
 
 > Everying started from DeepSig analysis: [DeepSig_connected](https://www.connectedpapers.com/main/f5655e2d2c16774c33b17e5a151352a8dfd82255/DeepSig%3A-deep-learning-improves-signal-peptide-detection-in-proteins/graph)
 >
@@ -7,1709 +7,700 @@
 >
 > To understand the main challenges and best architectures!
 
-------------------------------------------------------------------------
+--------------------------------
 
-## 1. overview:
+# 1. Overview
 
-After reviewing the five uploaded papers, the strongest conclusion is
-**not** simply that Sec/SPI and Tat/SPI are the main bottlenecks.
+## 1.1 The evolution in one picture
 
-A better statement is:
+```mermaid
+flowchart LR
+    A["DeepSig<br/>2018<br/>CNN + CRF"] --> B["SignalP 6.0<br/>2022<br/>Protein LM + CRF"]
+    B --> C["TSignal<br/>2023<br/>ProtBERT + Transformer"]
+    C --> D["SaSPNet / StrucAware<br/>2026<br/>Sequence + 3D structure + GCN"]
+    D --> E["Signal-3L 4.0<br/>2026<br/>ESM2 + sequence + structure + co-attention + CRF"]
+```
 
-> **The main remaining difficulty is precise cleavage-site localization
-> and robust generalization to underrepresented/unusual signal-peptide
-> classes. Which class is hardest depends on organism, dataset,
-> evaluation protocol, and whether prediction is conditioned on correct
-> SP-type classification.**
+The progression is roughly:
 
-Three observations support this:
+| Paper | Main representation | Output mechanism | Main research emphasis |
+|---|---|---|---|
+| **DeepSig** | Learned local sequence features | CNN + structured prediction / CRF | Deep learning for SP detection + cleavage |
+| **SignalP 6.0** | Protein-language-model embeddings | CRF | Better generalization + rare SP types |
+| **TSignal** | ProtBERT contextual embeddings | Transformer encoder/decoder | Remove hard-coded SP structure and learn it directly |
+| **SaSPNet** | ESM-2 + sequence + predicted 3D structure | CNN/BiLSTM/GCN + multimodal fusion | Minority SP classes |
+| **Signal-3L 4.0** | ESM2 + sequence + predicted structure | Co-attention + CRF + CB-LDAM | Class imbalance + cleavage + multimodal fusion |
 
-1.  **SignalP 6.0** substantially improved the previously
-    underrepresented SP types, especially **Sec/SPIII and Tat/SPII**,
-    showing that low-data classes were a major limitation of earlier
-    predictors.
-2.  **TSignal** improved overall cleavage-site F1 over SignalP 6.0, but
-    cleavage remained substantially harder than SP detection.
-3.  **SaSPNet and Signal-3L 4.0** explicitly target
-    minority/low-resource settings and show that the difficult tail of
-    the SP-class distribution is still a meaningful problem.
-
-A second important conclusion is:
-
-> **Structure is useful, but mainly as complementary information.
-> Sequence/PLM representations remain the dominant source of
-> information.**
-
-Signal-3L 4.0 provides particularly clean evidence: removing the
-structural branch reduces performance, but removing the sequence branch
-hurts more.
+### My favorite! SaSPNET:
 
 <img width="680" height="782" alt="image" src="https://github.com/user-attachments/assets/34e66ded-0725-4ee5-b5f0-32726d321267" />
 
-------------------------------------------------------------------------
+---
 
-# 2. The five papers at a glance
+# 2. Main Question and Idea
 
-  -------------------------------------------------------------------------------------------------------
-  Paper                       Year Main idea              Main innovation           Main remaining issue
-  -------------- ----------------- ---------------------- ------------------------- ---------------------
-  **DeepSig**                 2018 Deep CNN + structured  Learns N-terminal         Precise cleavage
-                                   cleavage prediction    patterns and explicitly   prediction; limited
-                                                          handles TM confusion      SP-type modeling
+## 2.1 DeepSig
 
-  **SignalP                   2022 Protein LM + CRF       Protein language model    Rare classes and
-  6.0**                                                   captures                  cleavage localization
-                                                          evolutionary/contextual   
-                                                          information and supports  
-                                                          all five SP types         
+### Question
+Can deep neural networks learn useful signal-peptide patterns directly from protein sequences and improve SP detection and cleavage-site prediction?
 
-  **TSignal**                 2023 ProtBERT + Transformer Removes hard-coded SP     Cleavage remains
-                                   sequence-to-sequence   structure and learns      harder than SP
-                                                          label sequences directly  detection
+### Idea
+Use a **deep convolutional neural network** to learn local sequence patterns, explicitly considering the difficult distinction between signal peptides and transmembrane regions. A second structured-prediction stage is used for cleavage-site localization.
 
-  **SaSPNet**                 2026 Sequence + PLM +       Explicitly targets        Complexity,
-                                   predicted 3D           minority SP classes using predicted-structure
-                                   structure + GCN        structural information    dependence, remaining
-                                                                                    rare-class errors
+### Innovation
+- CNN learns sequence features rather than relying mainly on handcrafted rules.
+- Explicit attention to **N-terminal TM false positives**.
+- Deep Taylor Decomposition is used to obtain relevance information for structured cleavage prediction.
 
-  **Signal-3L                 2026 ESM2 + sequence        Better multimodal fusion  Exact cleavage
-  4.0**                            branch + structure     and explicit              remains difficult,
-                                   representation +       low-resource/imbalance    especially in some
-                                   co-attention + CRF +   treatment                 classes
-                                   imbalance-aware loss                             
-  -------------------------------------------------------------------------------------------------------
+**Key interpretation:** DeepSig represents the transition from classical handcrafted/structured approaches toward learned sequence representations.
 
-<img width="731" height="310" alt="image" src="https://github.com/user-attachments/assets/5a0c1f6e-fca2-45a6-ab63-89a08e341fa8" />
+---
 
-------------------------------------------------------------------------
+## 2.2 SignalP 6.0
 
-# 3. Biological problem
+### Question
+Can a **protein language model (PLM)** solve the weaknesses of previous methods, especially for poorly represented SP types and distant/unseen proteins?
 
-A classical signal peptide usually contains:
+### Idea
 
-``` text
-N-region       H-region             C-region
-positive       hydrophobic          cleavage context
-charges        core                 ↓
-   |              |                |
-M K R A A L L L L L L A A S A | E P V ...
-```
-
-The fundamental prediction problem has two related parts:
-
-### Task A --- SP detection / classification
-
-> Does the protein have a signal peptide, and which SP type is it?
-
-### Task B --- cleavage-site prediction
-
-> If an SP exists, exactly where is it cleaved?
-
-These are **not equally difficult**.
-
-Modern models can achieve very strong SP classification while still
-making more errors in the exact cleavage position.
-
-------------------------------------------------------------------------
-
-# 4. The central distinction: classification vs cleavage
-
-  -----------------------------------------------------------------------
-  Task                    Typical output          Why difficult?
-  ----------------------- ----------------------- -----------------------
-  SP presence             SP / no-SP              SP hydrophobic region
-                                                  resembles N-terminal TM
-                                                  helix
-
-  SP type                 Sec/SPI, Sec/SPII,      Some classes have very
-                          Tat/SPI, etc.           few training examples
-
-  Cleavage site           Exact residue boundary  No universal cleavage
-                                                  motif; nearby positions
-                                                  can be biologically
-                                                  plausible
-
-  Cleavage with tolerance Correct within ±1, ±2,  Easier and often more
-                          ±3 residues             biologically realistic
-
-
-------------------------------------------------------------------------
-
-# 5. Paper 1 --- DeepSig (2018)
-
-## Core question
-
-Can deep learning improve signal-peptide detection and cleavage-site
-prediction while reducing confusion between signal peptides and
-N-terminal transmembrane regions?
-
-## Core idea
-
-DeepSig uses:
-
-``` text
+```text
 Protein sequence
       ↓
-Deep CNN
+ProtBERT / protein language model
       ↓
-SP / TM / other
-      ↓
-if SP detected
-      ↓
-structured sequence labeling
-      ↓
-cleavage site
-```
-
-The first stage uses a deep convolutional neural network on the
-N-terminus.
-
-The second stage treats cleavage-site prediction as a
-**sequence-labeling problem** and uses a probabilistic structured model.
-Deep Taylor Decomposition provides a relevance profile that is added as
-information for cleavage prediction.
-
-### Important innovation
-
-DeepSig explicitly treats **N-terminal transmembrane regions as a hard
-negative class**.
-
-That was important because:
-
-> hydrophobic SP core ≈ hydrophobic TM helix
-
-but biologically:
-
-``` text
-SP:
-hydrophobic region → CLEAVED → mature protein
-
-TM:
-hydrophobic region → RETAINED → membrane anchor
-```
-
-------------------------------------------------------------------------
-
-## DeepSig: independent SPDS17 benchmark
-
-  Organism               MCC   TM false-positive rate   Cleavage F1
-  --------------- ---------- ------------------------ -------------
-  Eukaryotes        **0.86**                 **2.5%**      **0.72**
-  Gram-positive         0.54                     0.0%      **0.82**
-  Gram-negative     **0.95**                     2.6%      **0.36**
-
-Source: DeepSig Table 3, independent SPDS17 dataset.
-
-### Cleavage-site plot
-
-``` text
-DeepSig cleavage F1 — SPDS17
-
-Eukaryotes       ██████████████      0.72
-Gram-positive    ████████████████    0.82
-Gram-negative    ███████             0.36
-```
-
-The striking point is that **good SP detection does not guarantee good
-cleavage prediction**.
-
-Gram-negative bacteria have MCC = 0.95 but cleavage F1 = 0.36.
-
-------------------------------------------------------------------------
-
-## DeepSig cross-validation
-
-  Organism          DeepSig MCC   DeepSig cleavage F1
-  --------------- ------------- ---------------------
-  Eukaryotes              0.910                 0.733
-  Gram-positive           0.878                 0.723
-  Gram-negative           0.900                 0.862
-
-DeepSig reports a roughly **2--4 percentage-point cleavage improvement**
-over the corresponding SignalP results in this benchmark, except for
-Gram-positive bacteria.
-
-------------------------------------------------------------------------
-
-## Important limitation for our five-paper comparison
-
-DeepSig does **not** report the later five-class breakdown:
-
--   Sec/SPI
--   Sec/SPII
--   Sec/SPIII
--   Tat/SPI
--   Tat/SPII
-
-Instead, it reports performance by **organism group**.
-
-Therefore, it is not valid to claim from DeepSig that "Tat/SPI was its
-weakest class."
-
-------------------------------------------------------------------------
-
-# 6. Paper 2 --- SignalP 6.0 (2022)
-
-## Core question
-
-Can a protein language model provide better representations for
-signal-peptide prediction, particularly for **rare SP types and
-distantly related sequences**?
-
-## Core architecture
-
-``` text
-Protein sequence
-      ↓
-Protein Language Model
-(BERT / ProtBERT-style)
-      ↓
-contextual residue representations
+contextual residue embeddings
       ↓
 CRF
       ↓
-SP region + SP type + cleavage
+SP region + SP type + cleavage site
 ```
 
-The major conceptual shift was:
+### Innovation
+The major conceptual jump is not simply "a bigger neural network."
 
-> Instead of learning mainly from manually designed local sequence
-> patterns, use a protein language model that has already learned broad
-> protein sequence context.
+It is:
 
-------------------------------------------------------------------------
+> **Use knowledge learned from millions of protein sequences before training the SP predictor.**
 
-## Five SP types
+The authors specifically hypothesized that protein LMs would help with:
+1. limited-data SP types,
+2. distant sequences,
+3. unknown species.
 
-SignalP 6.0 models:
+SignalP 6.0 reports substantial improvement particularly for the **underrepresented Sec/SPIII and Tat/SPII classes**.
 
-1.  Sec/SPI
-2.  Sec/SPII
-3.  Sec/SPIII
-4.  Tat/SPI
-5.  Tat/SPII
+---
 
-It also distinguishes non-SP sequences.
+## 2.3 TSignal
 
-------------------------------------------------------------------------
+### Question
+Can SP structure be learned **without hard-coding N-region → H-region → C-region rules**?
 
-## Why SignalP 6.0 mattered
+### Idea
 
-The paper explicitly hypothesized that protein language models would
-help with:
-
--   limited-data SP types
--   distant sequences
--   unknown species
-
-The paper reports particularly strong improvements for the
-**underrepresented Sec/SPIII and Tat/SPII classes**.
-
-This is important for our question:
-
-> **The hardest class is not necessarily the most common class.**
-
-------------------------------------------------------------------------
-
-## SignalP 6.0 benchmark metrics
-
-The later TSignal paper reports the following SignalP 6.0 benchmark
-averages:
-
-  Metric                   SignalP 6.0
-  ---------------------- -------------
-  MCC1                      **0.8532**
-  MCC2                      **0.8263**
-  Weighted cleavage F1      **0.7976**
-
-SignalP 6.0 also reports class × organism results graphically, including
-Eukarya.
-
-### Class-level information?
-
-**YES.**
-
-This is important:
-
-> SignalP 6.0 **does have class-based information**, both for SP
-> detection and cleavage prediction.
-
-Its Figure 2 explicitly separates:
-
--   Sec/SPI
--   Sec/SPII
--   Sec/SPIII
--   Tat/SPI
--   Tat/SPII
-
-and organism groups including Eukarya.
-
-Therefore, it is incorrect to say that SignalP 6.0 has no class-level
-evaluation.
-
-------------------------------------------------------------------------
-
-# 7. Paper 3 --- TSignal (2023)
-
-## Core question
-
-Can a fully data-driven Transformer model learn signal-peptide structure
-and cleavage behavior **without hard-coding N/H/C structural assumptions
-through an HMM/CRF-style model**?
-
-## Core architecture
-
-``` text
+```text
 Protein sequence
-       ↓
+      ↓
 ProtBERT
-       ↓
-1024-dimensional residue representations
-       ↓
+      ↓
 Transformer encoder/decoder
-       ↓
+      ↓
 per-residue labels
-       ↓
+      ↓
 SP type + cleavage site
 ```
 
-TSignal uses eight residue-level labels:
+TSignal uses 8 residue labels:
 
--   Sec/SPase I
--   Sec/SPase II
--   Sec/SPase IV
--   TAT/SPase I
--   TAT/SPase II
--   intracellular
--   transmembrane
--   extracellular
+- Sec/SPase I
+- Sec/SPase II
+- Sec/SPase IV
+- Tat/SPase I
+- Tat/SPase II
+- intracellular
+- transmembrane
+- extracellular
 
-The SP type is inferred from the predicted label at the beginning of the
-sequence.
+The cleavage site is inferred from the transition from an SP label sequence to a non-SP label.
 
-The cleavage site is determined from the transition from SP labels to a
-non-SP label.
+### Innovation
 
-------------------------------------------------------------------------
+Unlike HMM/CRF approaches, TSignal does **not hard-code knowledge of the classical SP structure**. The authors show that the Transformer can learn useful SP structural patterns from data.
 
-## Important conceptual innovation
+This is important conceptually:
 
-TSignal says that unlike HMM/CRF approaches, it does **not hard-code SP
-structure**.
+> **N → H → C is a biological pattern, not a mandatory machine-learning architecture.**
+
+---
+
+## 2.4 SaSPNet / StrucAware
+
+### Question
+Does adding **3D structural information** improve signal-peptide prediction, particularly for the difficult minority classes?
+
+### Idea
+
+```text
+                 ┌── Sequence branch ── CNN + BiLSTM + ESM-2 ──┐
+Protein sequence ┤                                               ├→ fusion → prediction
+                 └── Structure branch ── residue graph + GCN ───┘
+```
+
+The structure is predicted first, then represented as a residue-contact graph.
+
+### Innovation
+- Sequence information + predicted 3D structure.
+- GCN models residue-residue structural relationships.
+- Explicit focus on the **long-tail/minority-class problem**.
+- Minority-class independent evaluation.
+
+### Most important result
+
+Structure does **not** appear to be a magic solution for overall SP prediction.
 
 Instead:
 
-> The model learns the sequence-label structure from data.
+> **Structure is complementary, and its value is strongest for difficult/minority classes.**
 
-This is a significant conceptual step from:
+The paper reports that removing structure causes a >5% decrease in some minor-class metrics, while removing sequence information hurts even more.
 
-``` text
-"we know the SP has N → H → C"
+---
+
+## 2.5 Signal-3L 4.0
+
+### Question
+Can a stronger multimodal architecture solve two persistent problems:
+1. **imbalanced/long-tail SP classes**, and
+2. **precise cleavage-site prediction**?
+
+### Idea
+
+```text
+                         ┌──────── Sequence branch ────────┐
+Protein sequence → ESM2 ─┤ CNN + Transformer encoder       │
+                         └─────────────────────────────────┘
+                                      │
+                                      ▼
+                              Co-attention
+                                      ▲
+                                      │
+Predicted structure → structure branch / Transformer
+                                      │
+                                      ▼
+                           fused representation
+                                      ↓
+                           ESM2 + fused features
+                                      ↓
+                                     CRF
+                                      ↓
+                         SP class + cleavage site
 ```
 
-toward:
+The model additionally uses **CB-LDAM**, a class-imbalance-aware loss.
 
-``` text
-"let the model discover the relevant sequence dependencies"
+### Innovation
+The most interesting change relative to earlier structure-aware methods is the **fusion mechanism**:
+
+> Instead of simply concatenating sequence and structure features, Signal-3L uses **co-attention** so the two modalities can interact.
+
+The paper explicitly concludes that sequence is the primary source of predictive information and structure is complementary.
+
+<img width="731" height="310" alt="image" src="https://github.com/user-attachments/assets/5a0c1f6e-fca2-45a6-ab63-89a08e341fa8" />
+
+---
+
+# 3. Technical Difference
+
+## 3.1 Architecture comparison
+
+| Feature | DeepSig | SignalP 6.0 | TSignal | SaSPNet | Signal-3L 4.0 |
+|---|---|---|---|---|---|
+| Main input | Sequence | Sequence | Sequence | Sequence + structure | Sequence + structure |
+| Protein LM | No | ProtBERT | ProtBERT | ESM-2 | ESM2 |
+| CNN | ✓ | No | No | ✓ | ✓ |
+| BiLSTM | No | No | No | ✓ | No |
+| Transformer | No | BERT backbone | ✓ | ESM-2 / attention components | ✓ |
+| CRF | Structured stage | ✓ | No | Prediction stage | ✓ |
+| Explicit 3D structure | No | No | No | ✓ | ✓ |
+| GCN | No | No | No | ✓ | No |
+| Co-attention | No | No | No | No | ✓ |
+| Class-imbalance loss | No | Not central | No | LDAM | CB-LDAM |
+| Explicit TM label | Important negative class | Benchmark negative | ✓ | Classification setting | Benchmark setting |
+| Main novelty | Deep sequence learning | PLM | Data-driven structured prediction | Structure for minority classes | Multimodal co-attention + imbalance |
+
+---
+
+## 3.2 What exactly is being predicted?
+
+| Paper | SP detection | SP type | Cleavage site | Per-residue labeling |
+|---|---:|---:|---:|---:|
+| DeepSig | ✓ | Limited / organism-specific formulation | ✓ | Structured stage |
+| SignalP 6.0 | ✓ | **5 types** | ✓ | ✓ |
+| TSignal | ✓ | **5 SP types** | ✓ | **✓, 8 labels** |
+| SaSPNet | ✓ | **6 classes** including NO-SP | ✓ | ✓ |
+| Signal-3L 4.0 | ✓ | Sec/SPI, Sec/SPII, Tat/SPI in main benchmark | ✓ | CRF |
+
+---
+
+# 4. Results
+
+## 4.1 Overall classification results
+
+### Reported MCC values
+
+| Model | MCC1 | MCC2 | Context |
+|---|---:|---:|---|
+| **DeepSig** | ~0.86 | — | Eukaryotic SPDS17 independent test |
+| **SignalP 6.0** | **0.8532** | **0.8263** | TSignal benchmark |
+| **TSignal** | **0.8520** | **0.8312** | TSignal benchmark |
+| **SaSPNet** | ~0.90 overall | — | Its benchmark; especially focused on minor classes |
+| **Signal-3L Foldseek** | **0.884** | **0.861** | Signal-3L benchmark |
+| **Signal-3L FoldExplorer** | **0.891** | **0.865** | Signal-3L benchmark |
+
+> **Do not rank these numbers globally.** DeepSig, TSignal/SignalP6, SaSPNet, and Signal-3L use different benchmark setups and/or evaluation definitions.
+
+---
+
+## 4.2 Cleavage-site prediction — the most useful cross-paper comparison
+
+This is the metric I would emphasize for this project because classification is already quite strong in modern models.
+
+| Model | Cleavage metric | Overall / Eukaryote result | Important difficult-class result |
+|---|---|---:|---|
+| **DeepSig** | Cleavage F1 | **Euk: 0.72** | Gram−: 0.36 on SPDS17 |
+| **SignalP 6.0** | Weighted CS F1 | **0.7976** | Improved precision across categories; rare classes explicitly evaluated |
+| **TSignal** | Weighted CS F1 | **0.8127 ± 0.005** | Better than SignalP6 for many SP-type/organism combinations |
+| **SaSPNet** | CS F1 | ~0.788 overall | **~0.850 minor-class CS F1** |
+| **Signal-3L Foldseek** | Macro exact-match CS F1 ±0 | — | **Sec/SPI 0.688, Sec/SPII 0.927, Tat/SPI 0.615** |
+| **Signal-3L FoldExplorer** | Macro exact-match CS F1 ±0 | — | **Sec/SPI 0.689, Sec/SPII 0.924, Tat/SPI 0.603** |
+
+### Important caveat
+
+These are **not the same metric**:
+
+- DeepSig: reported cleavage F1 in its benchmark.
+- SignalP6/TSignal: weighted CS F1 in the TSignal benchmark.
+- SaSPNet: its own overall/minority-class CS evaluation.
+- Signal-3L: **strict exact-match ±0** macro-averaged across organism × SP-type categories.
+
+Therefore the most defensible conclusion is about **where errors remain**, not which paper has the largest absolute F1.
+
+---
+
+## 4.3 Signal-3L 4.0 — direct class-level comparison
+
+This is one of the most useful tables for the current project because Signal-3L reports the same three major SP types directly against SignalP6.
+
+### Exact cleavage-site F1, ±0 residues
+
+| Model | Sec/SPI | Sec/SPII | Tat/SPI |
+|---|---:|---:|---:|
+| SignalP 6.0 | 0.638 | 0.818 | 0.557 |
+| Signal-3L Foldseek | **0.688** | **0.927** | **0.615** |
+| Signal-3L FoldExplorer | **0.689** | **0.924** | **0.603** |
+| Foldseek gain vs SignalP6 | **+0.050** | **+0.109** | **+0.058** |
+| FoldExplorer gain vs SignalP6 | **+0.051** | **+0.106** | **+0.046** |
+
+### Visual summary
+
+```text
+Exact CS F1 (±0)
+
+Sec/SPI
+SignalP6       █████████████░░░░░  0.638
+Signal-3L      ██████████████░░░░  0.688–0.689
+
+Sec/SPII
+SignalP6       ████████████████░░  0.818
+Signal-3L      ██████████████████  0.924–0.927
+
+Tat/SPI
+SignalP6       ███████████░░░░░░░  0.557
+Signal-3L      ████████████░░░░░░  0.603–0.615
 ```
 
-------------------------------------------------------------------------
+**Interpretation:** Sec/SPII shows the largest improvement, while **Tat/SPI remains the weakest of these three classes**.
 
-## TSignal benchmark
+---
 
-  Metric                        TSignal   SignalP 6.0
-  ---------------- -------------------- -------------
-  MCC1               **0.8520 ± 0.016**        0.8532
-  MCC2               **0.8312 ± 0.013**        0.8263
-  Weighted CS F1     **0.8127 ± 0.005**        0.7976
+## 4.4 Signal-3L unconditional vs conditional cleavage prediction
 
-### Improvement in cleavage
+Signal-3L separates two questions:
 
-``` text
-Weighted cleavage F1
+- **Unconditional:** predict the cleavage site without requiring the global SP type to be correct.
+- **Conditional:** evaluate cleavage only when the SP type was correctly identified.
 
-SignalP 6.0   ████████████████     0.7976
-TSignal       ████████████████▎    0.8127
-```
+| Model | Sec/SPI | Sec/SPII | Tat/SPI |
+|---|---:|---:|---:|
+| Foldseek — unconditional | 0.727 | **0.945** | 0.640 |
+| FoldExplorer — unconditional | 0.730 | **0.941** | 0.635 |
+| Foldseek — conditional | 0.824 | 0.990 | **0.686** |
+| FoldExplorer — conditional | 0.821 | **0.991** | 0.635 |
 
-Difference:
+This is useful because it shows that **cleavage localization itself can be much better once the correct SP class is known**.
 
-**+0.0151 absolute F1**
+---
 
-The TSignal paper describes this as approximately three standard
-deviations above SignalP 6.0 for the overall cleavage prediction
-benchmark.
+# 5. Minority / Weak-Class Problem
 
-------------------------------------------------------------------------
+## 5.1 The key correction
 
-## Class-level information?
+It is **not accurate** to say:
 
-**YES.**
+> "Sec/SPI and Tat/SPI are always the main bottleneck."
 
-TSignal evaluates SP types and organism groups.
+The papers collectively support a better statement:
 
-It specifically discusses:
+> **Modern SP classification is already strong for common classes. The persistent difficulty is precise cleavage localization and robust prediction of underrepresented/unusual SP classes, and the exact weak class depends on organism, dataset and evaluation protocol.**
 
--   Sec/SPase I
--   Sec/SPase II
--   TAT/SPase I
+---
 
-and reports that the model has particularly interesting improvements for
-**Sec/SPase II and TAT-related cleavage prediction**.
+## 5.2 Which paper directly studies weak classes?
 
-It also reports supplementary results for Sec/SPase IV and TAT/SPase II.
+| Paper | Explicit class-imbalance focus? | Per-class analysis? | Minority-class evaluation? |
+|---|---:|---:|---:|
+| **DeepSig** | No | Limited | No dedicated minority analysis |
+| **SignalP 6.0** | **Yes** | **Yes** | **Yes** — especially Sec/SPIII and Tat/SPII |
+| **TSignal** | Not its main focus | **Yes** | Partial |
+| **SaSPNet** | **Yes — central motivation** | **Yes** | **Yes — dedicated minor-class test** |
+| **Signal-3L** | **Yes** | **Yes** | **Yes**, including low-sample categories |
 
-Therefore, TSignal is **not** a paper with only one overall cleavage
-score.
+### Important verification
 
-------------------------------------------------------------------------
+**DeepSig is the clear exception in this five-paper comparison.**
 
-# 8. Paper 4 --- SaSPNet / StrucAware (2026)
+It reports organism-level performance such as Eukaryotes, Gram-positive and Gram-negative bacteria, but it does **not provide the later five-way SP-type breakdown** (Sec/SPI, Sec/SPII, Tat/SPI, etc.) used by SignalP6/TSignal.
 
-## Core question
+So its Eukaryotic cleavage F1 of 0.72 is useful, but it cannot be converted into a Sec/SPI-vs-Tat/SPI comparison.
 
-Can **3D structural information** compensate for poor sequence
-representation in rare signal-peptide classes?
+---
 
-This paper is especially important for our discussion because it
-directly attacks the **minority-class problem**.
-
-------------------------------------------------------------------------
-
-## Dataset imbalance
-
-Approximate class distribution reported in the paper:
-
-  Class             Number   Percentage
-  ----------- ------------ ------------
-  NO-SP             15,625    **77.0%**
-  Sec/SPI            2,582       12.73%
-  Sec/SPII           1,615        7.96%
-  Tat/SPI              365        1.80%
-  Tat/SPII              33    **0.16%**
-  Sec/SPIII             70    **0.34%**
-  **Total**     **20,290**         100%
-
-This is an extreme long-tail distribution.
-
-### Visualization
-
-``` text
-NO-SP       ██████████████████████████████████████████████████ 77.0%
-Sec/SPI     ████████                                           12.7%
-Sec/SPII    █████                                              8.0%
-Tat/SPI     █                                                    1.8%
-Sec/SPIII   ▏                                                    0.34%
-Tat/SPII    ▏                                                    0.16%
-```
-
-This is why "overall accuracy" or even overall MCC can hide the real
-problem.
-
-------------------------------------------------------------------------
-
-## SaSPNet architecture
-
-``` text
-                    Protein sequence
-                          │
-              ┌───────────┴───────────┐
-              ↓                       ↓
-           ESM-2                  Sequence encoder
-              │                 CNN + BiLSTM + attention
-              └───────────┬───────────┘
-                          │
-                    sequence features
-                          │
-                ┌─────────┴─────────┐
-                ↓                   ↓
-          predicted 3D          residue graph
-           structure             GCN
-                └─────────┬─────────┘
-                          ↓
-                    multimodal fusion
-                          ↓
-                    classification
-                    + cleavage
-```
-
-The structural graph represents residues as nodes and spatial contacts
-as edges.
-
-------------------------------------------------------------------------
-
-## What did SaSPNet actually improve?
-
-The paper's key result is **not a huge universal improvement**.
-
-Instead:
-
-> The strongest gains occur for **minor classes**.
-
-The paper reports:
-
--   improved minor-class precision
--   improved minor-class recall
--   improved minor-class F1
--   improved minor-class cleavage prediction
--   improved performance on an independent minor-class test set
-
-The paper explicitly evaluates:
-
--   overall multiclass MCC
--   minority precision/recall/F1
--   one-vs-rest MCC for individual minority classes
--   overall cleavage performance
--   minority-class cleavage performance
-
-### Therefore:
-
-**SaSPNet is the clearest evidence among the five papers that the
-minority classes themselves are still a research problem.**
-
-------------------------------------------------------------------------
-
-## Structure ablation
-
-The paper shows that removing structure reduces performance.
-
-But this does **not** mean:
-
-> "Structure solves SP prediction."
-
-Rather:
-
-> **Structure provides complementary information, particularly for
-> difficult/minority classes.**
-
-This distinction is important.
-
-------------------------------------------------------------------------
-
-# 9. Paper 5 --- Signal-3L 4.0 (2026)
-
-## Core question
-
-Can better multimodal fusion of sequence and structure, together with
-explicit handling of class imbalance, improve SP classification and
-cleavage prediction in low-resource settings?
-
-------------------------------------------------------------------------
-
-## Core architecture
-
-``` text
-                     Protein sequence
-                           │
-                     ESM-2 / sequence
-                           │
-                  ┌────────┴────────┐
-                  ↓                 ↓
-             sequence branch    structural branch
-                  │                 │
-             CNN / sequence      Foldseek /
-             representation      FoldExplorer
-                  │                 │
-                  └────────┬────────┘
-                           ↓
-                     Co-attention
-                           ↓
-                         CRF
-                           ↓
-                 SP type + cleavage
-```
-
-The paper tests different structural representations:
-
--   pLDDT features
--   pLDDT filtering
--   pLDDT gating
--   Foldseek
--   FoldExplorer
-
-------------------------------------------------------------------------
-
-# 10. Signal-3L 4.0: the most important numerical table
-
-### Benchmark --- exact-match cleavage F1 (±0)
-
-  ---------------------------------------------------------------------------------
-  Model                    MCC1         MCC2   Sec/SPI CS  Sec/SPII CS   Tat/SPI CS
-                                                       F1           F1           F1
-  ---------------- ------------ ------------ ------------ ------------ ------------
-  **SignalP 6.0**         0.843        0.798        0.638        0.818        0.557
-
-  **Signal-3L 4.0     **0.884**    **0.861**    **0.688**    **0.927**    **0.615**
-  --- Foldseek**                                                       
-
-  **Signal-3L 4.0     **0.891**    **0.865**    **0.689**    **0.924**    **0.603**
-  ---                                                                  
-  FoldExplorer**                                                       
-  ---------------------------------------------------------------------------------
-
-------------------------------------------------------------------------
-
-## Signal-3L classification improvement
-
-Compared with SignalP 6.0:
-
-  Metric     Signal-3L Foldseek         Gain   Signal-3L FoldExplorer         Gain
-  -------- -------------------- ------------ ------------------------ ------------
-  MCC1                    0.884   **+0.041**                    0.891   **+0.048**
-  MCC2                    0.861   **+0.063**                    0.865   **+0.067**
-
-So the biggest overall classification gain is in **MCC2**.
-
-------------------------------------------------------------------------
-
-## Signal-3L cleavage improvement
-
-Compared with SignalP 6.0:
-
-  SP type      SignalP 6   Foldseek         Gain   FoldExplorer         Gain
-  ---------- ----------- ---------- ------------ -------------- ------------
-  Sec/SPI          0.638      0.688   **+0.050**          0.689   **+0.051**
-  Sec/SPII         0.818      0.927   **+0.109**          0.924   **+0.106**
-  Tat/SPI          0.557      0.615   **+0.058**          0.603   **+0.046**
-
-### This is extremely informative.
-
-The biggest improvement is:
-
-> **Sec/SPII cleavage: approximately +0.11 F1**
-
-while Tat/SPI remains the lowest of the three:
-
-> **Tat/SPI ≈ 0.60--0.62**
-
-So it would be wrong to conclude that Tat/SPI has been "solved."
-
-------------------------------------------------------------------------
-
-## Plot: Signal-3L vs SignalP 6.0
-
-``` mermaid
-xychart-beta
-    title "Exact-match cleavage F1: SignalP 6.0 vs Signal-3L 4.0"
-    x-axis ["Sec/SPI", "Sec/SPII", "Tat/SPI"]
-    y-axis "F1" 0 --> 1
-    bar [0.638, 0.818, 0.557]
-    bar [0.688, 0.927, 0.615]
-```
-
-**Series order:** SignalP 6.0, Signal-3L Foldseek.
-
-------------------------------------------------------------------------
-
-# 11. Signal-3L conditional vs unconditional cleavage
-
-Signal-3L performs an especially useful analysis by separating:
-
-### Unconditional cleavage
-
-Can the model predict the cleavage site regardless of whether it first
-predicts the SP type correctly?
-
-### Conditional cleavage
-
-Evaluate cleavage only when the global SP type was correctly identified.
-
-This separates two sources of error.
-
-  -----------------------------------------------------------------------
-  Model                     Sec/SPI           Sec/SPII            Tat/SPI
-                      unconditional      unconditional      unconditional
-  -------------- ------------------ ------------------ ------------------
-  Foldseek                    0.727          **0.945**          **0.640**
-
-  FoldExplorer            **0.730**              0.941              0.635
-  -----------------------------------------------------------------------
-
-Conditional:
-
-  -----------------------------------------------------------------------
-  Model                     Sec/SPI           Sec/SPII            Tat/SPI
-                        conditional        conditional        conditional
-  -------------- ------------------ ------------------ ------------------
-  Foldseek                **0.824**              0.990          **0.686**
-
-  FoldExplorer                0.821          **0.991**              0.635
-  -----------------------------------------------------------------------
-
-### Interpretation
-
-Once the model already knows the correct SP class:
-
-> cleavage prediction becomes much easier.
-
-This means that some of the apparent cleavage difficulty is actually
-caused by **upstream SP-type recognition errors**.
-
-------------------------------------------------------------------------
-
-# 12. Structure ablation in Signal-3L
-
-Signal-3L provides one of the cleanest experiments for asking:
-
-> "Is structure actually useful?"
-
-  -------------------------------------------------------------------------------------
-  Model            Parameters        MCC1        MCC2  Sec/SPI CS   Sec/SPII Tat/SPI CS
-                          (M)                                  F1      CS F1         F1
-  -------------- ------------ ----------- ----------- ----------- ---------- ----------
-  No structural         10.38       0.832       0.799       0.634      0.887      0.543
-  branch                                                                     
-
-  Foldseek              25.21       0.884       0.861       0.688      0.927      0.615
-
-  FoldExplorer          25.34   **0.891**   **0.865**   **0.689**      0.924      0.603
-  -------------------------------------------------------------------------------------
-
-### Structure contribution
-
-Compared with no structure:
-
-  Metric             Foldseek gain   FoldExplorer gain
-  ---------------- --------------- -------------------
-  MCC1                      +0.052          **+0.059**
-  MCC2                      +0.062          **+0.066**
-  Sec/SPI CS F1             +0.054              +0.055
-  Sec/SPII CS F1            +0.040              +0.037
-  Tat/SPI CS F1             +0.072              +0.060
-
-The largest cleavage gain from adding structure is for **Tat/SPI** in
-this ablation.
-
-------------------------------------------------------------------------
-
-# 13. The most important question: what is actually still difficult?
-
-## Short answer
-
-### Not simply:
-
-> "Sec/SPI is difficult."
-
-### Not simply:
-
-> "Tat/SPI is difficult."
-
-### Better:
-
-> **Exact cleavage localization and low-resource/generalization
-> performance remain the central weaknesses, with difficulty varying by
-> SP type and organism.**
-
-------------------------------------------------------------------------
-
-# 14. Which SP classes are actually "weak"?
-
-The evidence is different across papers.
-
-  -------------------------------------------------------------------------
-  SP type / problem       Evidence                Interpretation
-  ----------------------- ----------------------- -------------------------
-  **Sec/SPI**             Signal-3L exact CS F1 ≈ Still imperfect, but not
-                          0.69                    the weakest among the
-                                                  three major types
-
-  **Sec/SPII**            Signal-3L CS F1 ≈       **Not currently the main
-                          0.92--0.93              cleavage bottleneck** in
-                                                  this benchmark
-
-  **Tat/SPI**             Signal-3L CS F1 ≈       **Clearly difficult** in
-                          0.60--0.62              this benchmark
-
-  **Tat/SPII**            SignalP6 identifies it  Low-data/generalization
-                          as underrepresented;    remains important
-                          SaSPNet treats it as    
-                          minority                
-
-  **Sec/SPIII**           SignalP6 specifically   Historically a major
-                          reports major gains     low-data problem
-                          over SignalP5           
-
-  **Minor classes         SaSPNet explicitly      Strong evidence that the
-  overall**               targets them            long tail remains
-                                                  important
-  -------------------------------------------------------------------------
-
-------------------------------------------------------------------------
-
-# 15. The long-tail problem
-
-The five-class formulation reveals a major statistical problem.
-
-``` text
-                 Training examples
-
-NO-SP       ███████████████████████████████████████████████
-Sec/SPI     ███████
-Sec/SPII    █████
-Tat/SPI     █
-Sec/SPIII   ▏
-Tat/SPII    ▏
-```
-
-A model can obtain excellent overall performance by becoming very good
-at:
-
--   NO-SP
--   Sec/SPI
-
-while remaining poor on:
-
--   Tat/SPI
--   Tat/SPII
--   Sec/SPIII
-
-This is why **macro metrics and per-class metrics are much more
-informative than a single overall accuracy**.
-
-------------------------------------------------------------------------
-
-# 16. Why "the data is not few" can be misleading
-
-A class may contain hundreds of proteins globally and still be a
-**low-resource ML class**.
-
-There are several reasons:
-
-1.  It may contain only a small number of examples relative to the
-    dominant class.
-2.  Sequence redundancy must be removed.
-3.  Train/test homology leakage must be avoided.
-4.  Different organism groups create additional subdivisions.
-5.  Rare combinations such as:
-
-``` text
-Tat/SPI × Archaea
-Sec/SPII × Gram-negative
-Tat/SPI × Gram-positive
-```
-
-can contain extremely few independent examples.
-
-Signal-3L demonstrates this very clearly.
-
-On its independent test set, three rare organism × SP-type categories
-contained only **six proteins in total**, and every compared method
-correctly predicted 5/6 cleavage sites.
-
-That is a 5/6 result, but it is **not enough evidence to claim a robust
-83.3% class-level performance**.
-
-------------------------------------------------------------------------
-
-# 17. Very important: Eukaryotes vs bacteria
-
-Our Bioinformatics II project focuses on:
-
-> **Eukaryotic proteins**
-
-The five modern papers, however, use broader benchmarks containing
-combinations of:
-
--   Eukarya
--   Gram-positive bacteria
--   Gram-negative bacteria
--   Archaea
-
-This matters because:
-
-### Tat
-
-The classical Tat pathway is mainly relevant to prokaryotes and plant
-chloroplasts, whereas the main eukaryotic secretory pathway is
-Sec/ER-based.
-
-Therefore, **Tat/SPI and Tat/SPII are not directly representative of the
-main difficulty of our eukaryotic-only project.**
-
-For our project, the more directly relevant questions are:
-
--   Eukaryotic Sec/SPI prediction
--   cleavage localization
--   SP vs N-terminal TM discrimination
--   generalization to unseen eukaryotic proteins
--   robustness to sequence redundancy
--   experimentally supported labels
-
-------------------------------------------------------------------------
-
-# 18. Which papers have class-level information?
-
-This was checked explicitly.
-
-  -----------------------------------------------------------------------
-  Paper                   Class-specific results? What level?
-  ----------------------- ----------------------- -----------------------
-  **DeepSig**             **NO** for the later    Organism groups:
-                          five SP types           Eukaryotes / Gram+ /
-                                                  Gram−
-
-  **SignalP 6.0**         **YES**                 Five SP types ×
-                                                  organism groups
-
-  **TSignal**             **YES**                 SP types × organism
-                                                  groups; supplementary
-                                                  detailed results
-
-  **SaSPNet**             **YES**                 Minor-class metrics,
-                                                  OvR MCC, minor-class
-                                                  cleavage
-
-  **Signal-3L 4.0**       **YES**                 Sec/SPI, Sec/SPII,
-                                                  Tat/SPI + organism ×
-                                                  SP-type analyses
-  -----------------------------------------------------------------------
-
-### Important correction
-
-So if someone says:
-
-> "One of these papers has no class-based information even in plots"
-
-the correct answer is:
-
-**DeepSig is the exception only because its taxonomy predates the
-five-class framework.**
-
-It still has detailed organism-specific performance.
-
-The other four clearly contain class-level analysis.
-
-------------------------------------------------------------------------
-
-# 19. Five-paper comparison of the central metrics
-
-## Overall SP classification
-
-  ------------------------------------------------------------------------
-  Paper                 Main classification   Best reported value relevant
-                        metric                                        here
-  --------------------- --------------------- ----------------------------
-  DeepSig               MCC                         Eukaryotes **0.86** on
-                                                                    SPDS17
-
-  SignalP 6.0           MCC1                                    **0.8532**
-
-  SignalP 6.0           MCC2                                    **0.8263**
-
-  TSignal               MCC1                            **0.8520 ± 0.016**
-
-  TSignal               MCC2                            **0.8312 ± 0.013**
-
-  SaSPNet               Overall MCC             \~**0.90** range; emphasis
-                                                          on minor classes
-
-  Signal-3L Foldseek    MCC1                                     **0.884**
-
-  Signal-3L Foldseek    MCC2                                     **0.861**
-
-  Signal-3L             MCC1                                     **0.891**
-  FoldExplorer                                
-
-  Signal-3L             MCC2                                     **0.865**
-  FoldExplorer                                
-  ------------------------------------------------------------------------
-
-**Caution:** These values come from different datasets/evaluation
-protocols and should not be interpreted as one universal leaderboard.
-
-------------------------------------------------------------------------
-
-# 20. Cleavage-site comparison
-
-## Most directly comparable modern benchmark
-
-  --------------------------------------------------------------------------
-  Model                 Sec/SPI       Sec/SPII        Tat/SPI      Overall /
-                                                                 weighted CS
-                                                                      metric
-  -------------- -------------- -------------- -------------- --------------
-  SignalP 6.0         **0.638**      **0.818**      **0.557**       Weighted
-                                                                  **0.7976**
-
-  TSignal                   ---            ---            ---       Weighted
-                                                                  **0.8127 ±
-                                                                     0.005**
-
-  Signal-3L           **0.688**      **0.927**      **0.615**    Macro class
-  Foldseek                                                     average shown
-
-  Signal-3L           **0.689**      **0.924**      **0.603**    Macro class
-  FoldExplorer                                                 average shown
-  --------------------------------------------------------------------------
-
-`—` means that the exact class-level values were not recovered as
-directly comparable numeric values from the uploaded main paper text;
-TSignal reports them in its supplementary material/figures.
-
-------------------------------------------------------------------------
-
-# 21. DeepSig vs modern models: why direct comparison is dangerous
-
-DeepSig:
-
-``` text
-2018
-SPDS17
-Eukaryotes / Gram+ / Gram−
-```
-
-Modern papers:
-
-``` text
-2022–2026
-multiple SP classes
-multiple organism groups
-different datasets
-different homology partitions
-different cleavage tolerances
-```
-
-Therefore:
-
-> **Do not rank all five papers by simply putting their F1/MCC numbers
-> into one leaderboard.**
-
-The meaningful comparison is **conceptual progression + matched
-benchmark comparisons where available**.
-
-------------------------------------------------------------------------
-
-# 22. What did each innovation actually solve?
-
-  -----------------------------------------------------------------------
-  Innovation                          What it helped
-  ----------------------------------- -----------------------------------
-  Deep CNN                            Learned local sequence patterns
-
-  Explicit TM class                   Reduced SP/TM confusion
-
-  Structured cleavage model           Improved positional consistency
-
-  Protein LM                          Better contextual/evolutionary
-                                      representation
-
-  CRF                                 Structured residue-level
-                                      predictions
-
-  Transformer decoder                 Learned sequence-label dependencies
-                                      without hard-coded SP structure
-
-  3D structure                        Added complementary information
-
-  GCN / structural encoder            Modeled spatial residue
-                                      relationships
-
-  Co-attention                        Let sequence and structure interact
-                                      rather than simply concatenate
-
-  LDAM / class-aware loss             Addressed long-tail class imbalance
-
-  Independent minor-class test        Tested whether rare-class
-                                      improvements generalize
-  -----------------------------------------------------------------------
-
-------------------------------------------------------------------------
-
-# 23. The evolution of the field
-
-``` text
-von Heijne
-   │
-   │ hand-designed statistical signal
-   ↓
-DeepSig
-   │
-   │ CNN + structured cleavage model
-   ↓
-SignalP 6.0
-   │
-   │ protein language model + CRF
-   ↓
-TSignal
-   │
-   │ PLM + Transformer sequence labeling
-   ↓
-SaSPNet
-   │
-   │ sequence + PLM + 3D structure + GCN
-   ↓
-Signal-3L 4.0
-   │
-   │ multimodal co-attention
-   │ + structural representation
-   │ + CRF
-   │ + imbalance-aware learning
-   ↓
-Current frontier
-```
-
-------------------------------------------------------------------------
-
-# 24. Is structure actually useful?
-
-## Evidence from SaSPNet
-
-Yes, especially for minority classes.
-
-But the improvement is not equivalent to:
-
-> "Sequence models cannot solve SP prediction."
-
-Instead:
-
-> **Sequence information remains foundational; structure provides
-> complementary information.**
-
-## Evidence from Signal-3L
-
-The ablation is even clearer:
-
-``` text
-No structure
-    ↓
-MCC1 = 0.832
-MCC2 = 0.799
-
-        + structure
-
-Foldseek
-    ↓
-MCC1 = 0.884
-MCC2 = 0.861
-
-FoldExplorer
-    ↓
-MCC1 = 0.891
-MCC2 = 0.865
-```
-
-So structure contributes real information.
-
-But the model becomes much larger:
-
-``` text
-No structural branch       ~10.38 M parameters
-Foldseek                   ~25.21 M
-FoldExplorer               ~25.34 M
-```
-
-Thus the question is not:
-
-> "Does structure help?"
-
-It does.
-
-The more interesting question is:
-
-> **Is the gain large enough to justify the additional structural
-> prediction and model complexity?**
-
-------------------------------------------------------------------------
-
-# 25. The strongest evidence against "structure alone solves it"
-
-Signal-3L's own baseline experiments show that:
-
-> **ESM2 + CRF remains a very strong baseline.**
-
-The sequence/PLM branch is the foundation.
-
-Signal-3L explicitly concludes that sequence remains primary and
-structure complementary.
-
-This is consistent with the broader progression:
-
-``` text
-Sequence
-   ↓
-Protein language model
-   ↓
-still extremely powerful
-   +
-Structure
-   ↓
-additional information, especially difficult cases
-```
-
-------------------------------------------------------------------------
-
-# 26. Cleavage-site prediction is a special problem
-
-The cleavage site is difficult because there is no perfectly conserved
-motif.
-
-A common pattern is:
-
-``` text
-... [hydrophobic H-region] ... small residues ... | mature protein
-                                                   ↑
-                                                cleavage
-```
-
-Often an Ala-X-Ala-like pattern occurs, but it is not a universal
-deterministic rule.
-
-The Bioinformatics II material uses a cleavage window such as:
-
-``` text
-[-13, +2]
-```
-
-around the cleavage position for sequence-logo analysis.
-
-This is an important distinction:
-
-> The biologically relevant cleavage context can be local, while the
-> model may use a much larger N-terminal context to decide whether the
-> protein is an SP at all.
-
-------------------------------------------------------------------------
-
-# 27. Why cleavage can remain hard even when SP detection is excellent
-
-Imagine:
-
-``` text
-Protein A
-
-SP --------------------|
-                       ↑
-                   true CS = 20
-
-Model prediction:
-SP -------------------|
-                      ↑
-                  predicted CS = 19
-```
-
-Biologically, positions 19 and 20 may both look plausible.
-
-But exact-match F1 gives:
-
-``` text
-correct = 0
-```
-
-unless the evaluation allows ±1.
-
-This explains why:
-
-> SP classification can be 0.89 MCC while exact cleavage F1 is only
-> \~0.60--0.70 for difficult classes.
-
-------------------------------------------------------------------------
-
-# 28. Most important evidence for the "minority-class" problem
+# 6. What improved the most?
 
 ## SignalP 6.0
 
-Explicitly reports that performance improved substantially for:
+The major improvement was **rare SP-type classification**, especially:
 
--   **Sec/SPIII**
--   **Tat/SPII**
+- Sec/SPIII
+- Tat/SPII
 
-because these were underrepresented.
+The authors explicitly state that these underrepresented classes were poorly predicted by SignalP5 and improved substantially with protein-language-model representations.
+
+### Main lesson
+
+> **Pretraining solves part of the low-data problem.**
+
+---
+
+## TSignal
+
+The major improvement was **removing hard-coded structural assumptions** and allowing a Transformer to learn sequence-label dependencies.
+
+Reported weighted cleavage F1:
+
+```text
+SignalP 6.0   0.7976
+TSignal       0.8127 ± 0.005
+              ↑
+           +0.0151
+```
+
+TSignal also reports particularly interesting gains for **Sec/SPII cleavage** and TAT predictions.
+
+### Main lesson
+
+> **A fully data-driven sequence model can learn useful biological SP structure without explicitly coding N/H/C rules.**
+
+---
 
 ## SaSPNet
 
-Builds an explicit minority-class evaluation.
+The biggest improvement is **not overall classification**.
+
+It is the improvement on **minor classes** and their cleavage prediction.
+
+The paper reports:
+- >10% improvements in minor-class recall/F1 in comparisons with baselines.
+- nearly 10% improvement in minor-class cleavage-site F1.
+- removing structural information causes >5% decreases in some minor-class metrics.
+
+### Main lesson
+
+> **3D structure appears useful mainly as complementary information for difficult/minority classes.**
+
+---
 
 ## Signal-3L 4.0
 
-Explicitly evaluates low-resource/challenging settings and reports
-class-specific cleavage.
+The strongest benchmark improvement is:
 
-Therefore, the long-tail problem is **not merely our interpretation**.
+### Classification
 
-It is a recurring design motivation in modern SP prediction.
+```text
+SignalP6        MCC1 0.843
+Signal-3L FE    MCC1 0.891
 
-------------------------------------------------------------------------
+SignalP6        MCC2 0.798
+Signal-3L FE    MCC2 0.865
+```
 
-# 29. But what is the single most important unresolved problem?
+### Cleavage
 
-For a research project, I would phrase it as:
+The largest class-specific gain is:
 
-> ### Robust cleavage-site localization and SP-type prediction for low-resource, weakly represented, and evolutionarily distant signal peptides.
+```text
+Sec/SPII:
+0.818 → 0.924–0.927
+≈ +0.106 to +0.109
+```
 
-For a **eukaryotic-only** project:
+The authors also show that:
 
-> ### Can we accurately localize the cleavage site and distinguish a true cleavable eukaryotic signal peptide from a similar N-terminal membrane anchor in evolutionarily novel proteins?
+- sequence is still the **dominant information source**;
+- structure is **complementary**;
+- co-attention is better than simple concatenation;
+- class-balanced learning helps, although the magnitude depends on the SP category.
 
-This combines the most important unresolved biological/ML issues.
+---
 
-------------------------------------------------------------------------
+# 7. Main Challenges and Weakness
 
-# 30. Why SP vs TM is still important
+## 7.1 Cleavage-site prediction remains the clearest bottleneck
 
-DeepSig showed that N-terminal TM helices are a major source of
-confusion.
+The detection problem is now relatively mature.
 
-The reason is simple:
+The model can often answer:
 
-``` text
+> "This protein has an SP."
+
+The harder question is:
+
+> **"Exactly between which two residues is it cleaved?"**
+
+The cleavage site has no universally conserved motif. The classical `AxA`-like pattern is useful but weak.
+
+This is why even strong models can have substantially lower cleavage performance than SP detection.
+
+---
+
+## 7.2 Minority / long-tail classes
+
+A representative imbalance is visible in SaSPNet:
+
+| Class | Approx. fraction |
+|---|---:|
+| NO-SP | **77%** |
+| Sec/SPI | 12.73% |
+| Sec/SPII | 7.96% |
+| Tat/SPI | 1.80% |
+| Tat/SPII | 0.16% |
+| Sec/SPIII | 0.34% |
+
+This means a model can obtain excellent overall performance while still being weak on rare biological classes.
+
+### This is especially important for research
+
+The rare classes are often the ones where:
+- there are fewer examples,
+- sequence patterns are less well characterized,
+- evaluation variance is large,
+- a few errors can drastically change F1.
+
+---
+
+## 7.3 Small-sample evaluation can be misleading
+
+Signal-3L's independent test is a very good example.
+
+Three rare organism × SP-type categories contain only **6 proteins total**.
+
+All compared methods correctly predict **5/6** cleavage sites.
+
+Therefore:
+
+> A seemingly huge percentage difference can sometimes be caused by only one protein.
+
+This is why future work should report **sample counts together with F1/accuracy**, especially for rare classes.
+
+---
+
+## 7.4 Structure helps — but it is not the main solution
+
+Both SaSPNet and Signal-3L support a similar conclusion:
+
+```text
+Sequence information
+       ↓↓↓↓↓↓↓↓↓
+   PRIMARY SOURCE
+
+Structure information
+       ↓↓↓
+   COMPLEMENTARY
+```
+
+Signal-3L explicitly finds that removing the sequence branch hurts more than removing the structure branch.
+
+Therefore:
+
+> **Adding 3D structure is useful, but it does not replace strong sequence/PLM representations.**
+
+---
+
+## 7.5 Structure also adds cost and uncertainty
+
+A structure-aware model needs a predicted structure.
+
+That means:
+
+```text
+sequence
+   ↓
+structure prediction
+   ↓
+structure representation
+   ↓
+SP model
+```
+
+This increases:
+- computational cost,
+- pipeline complexity,
+- dependence on predicted structures,
+- potential error propagation.
+
+So structure should have a measurable benefit before it is justified.
+
+---
+
+## 7.6 SP vs transmembrane helix remains important
+
+Signal peptides and N-terminal TM helices can both contain strong hydrophobic stretches.
+
+```text
 SIGNAL PEPTIDE
 
-N-region → HYDROPHOBIC CORE → cleavage
-                             ↓
-                       hydrophobic part removed
+N ── hydrophobic ── cleavage ── mature protein
+                     ↑
+                removed
 
 
-TRANSMEMBRANE HELIX
+TM HELIX
 
-N-region → HYDROPHOBIC CORE → remains in membrane
-                             ↓
-                       membrane anchor
+N ── hydrophobic ───────────── protein
+       ↑
+   remains in membrane
 ```
 
-Same broad physical signal:
+This is why:
+- DeepSig explicitly treated TM proteins as an important negative class.
+- SignalP6 includes TM negatives in evaluation.
+- TSignal explicitly has a TM residue label.
 
-> hydrophobic N-terminal region
+However, across these five papers, the newer evidence makes **cleavage precision + minority classes** a more compelling research bottleneck than simply saying "SP vs TM is unsolved."
 
-Different biological fate:
+---
 
-> **cleaved vs retained**
+# 8. summery
 
-This makes SP/TM discrimination a fundamental problem.
+| Question | DeepSig | SignalP 6.0 | TSignal | SaSPNet | Signal-3L |
+|---|---|---|---|---|---|
+| Can it detect SP? | ✓ | **✓✓** | **✓✓** | **✓✓** | **✓✓** |
+| Can it predict cleavage? | ✓ | ✓ | **✓** | **✓** | **✓** |
+| Handles multiple SP types? | Limited | **✓✓** | **✓✓** | **✓✓** | Major 3 types in benchmark |
+| Protein LM? | ✗ | ✓ | ✓ | ✓ | ✓ |
+| Learns without hard-coded N/H/C? | Partial | CRF structure | **✓✓** | ✓ | ✓ |
+| Uses 3D structure? | ✗ | ✗ | ✗ | **✓** | **✓** |
+| Explicit minority-class focus? | ✗ | **✓** | Partial | **✓✓** | **✓** |
+| Explicit imbalance loss? | ✗ | ✗ | ✗ | **✓** | **✓** |
+| Co-attention? | ✗ | ✗ | ✗ | ✗ | **✓** |
+| Strongest conceptual contribution | CNN sequence learning | PLM for rare classes | Data-driven labeling | Structure for minorities | Multimodal + imbalance-aware fusion |
 
-However, based on the five papers reviewed here, **cleavage
-localization + rare-class generalization now appears to be a stronger
-modern research opportunity than simply building another SP/TM
-classifier.**
+| Paper | Takeaway |
+|---|---|
+| **DeepSig (2018)** | Deep CNNs can learn SP sequence patterns and improve detection/cleavage, but the model era is still largely sequence-feature driven. |
+| **SignalP 6.0 (2022)** | Protein language models dramatically help generalization and especially underrepresented SP types. |
+| **TSignal (2023)** | A Transformer can learn SP structural patterns directly instead of relying on hard-coded N/H/C structure. |
+| **SaSPNet (2026)** | 3D structure adds useful complementary information, particularly for minority SP classes and their cleavage prediction. |
+| **Signal-3L 4.0 (2026)** | Better sequence–structure interaction and imbalance-aware learning can improve both classification and cleavage, but sequence remains the dominant information source. |
 
-------------------------------------------------------------------------
 
-# 31. Recommended evaluation strategy for our project
+> **The central unresolved problem is no longer simply detecting a signal peptide. It is obtaining reliable, generalizable and biologically precise predictions for difficult SP classes and, especially, their exact cleavage sites.**
 
-Because our project is **eukaryotic-only**, a strong evaluation should
-not rely on only one number.
+> **Among the five papers, the strongest evidence for this comes from the explicit minority-class analyses of SignalP 6.0, SaSPNet and Signal-3L, and from the cleavage-site results of TSignal and Signal-3L.**
 
-## Report:
 
-### A. SP detection
+---
 
--   MCC
--   precision
--   recall
--   F1
--   PR-AUC if appropriate
+# 9. Main Conclusions
 
-### B. Cleavage prediction
+### 1. The field has largely moved beyond simple SP detection.
 
-Report:
+Modern models are already strong at answering:
 
--   exact match (±0)
--   ±1
--   ±2
--   ±3 residues
+> **SP or no SP?**
 
-### C. Per-class / per-subgroup
+The harder problem is increasingly:
 
-For eukaryotes, stratify where sample sizes permit:
+> **What type, and exactly where is the cleavage?**
 
--   kingdom
--   major taxonomic groups
--   protein length
--   SP length
--   sequence similarity to training set
+---
 
-### D. Hard negatives
+### 2. The weakest classes are not universally the same.
 
-Especially:
+It is **wrong to label Sec/SPI or Tat/SPI as universally "the bottleneck."**
 
--   N-terminal TM proteins
--   membrane proteins
--   proteins with signal-anchor-like N-termini
+Examples:
 
-### E. Homology-aware test
+- SignalP6's major story is improvement in **Sec/SPIII and Tat/SPII**, which were underrepresented.
+- Signal-3L shows its largest cleavage improvement on **Sec/SPII**.
+- Tat/SPI remains relatively weak in Signal-3L's strict exact-match benchmark.
+- SaSPNet specifically demonstrates that **minor classes as a group** remain harder.
 
-This is essential.
+---
 
-A model can appear excellent if highly similar proteins occur in both
-training and test sets.
+### 3. Cleavage prediction is the most consistent weakness across the papers.
 
-------------------------------------------------------------------------
+Even when SP classification is high, exact cleavage localization remains noticeably harder.
 
-# 32. What we should NOT do
+This is probably the most defensible common bottleneck across the five papers.
 
-Avoid:
+---
 
-``` text
-Random train/test split
-        ↓
-99% accuracy
-        ↓
-"Excellent new SP predictor!"
-```
+### 4. Protein language models were a major step forward.
+
+SignalP6 and TSignal demonstrate that pretrained protein representations provide information that was difficult to obtain from small task-specific datasets.
+
+---
+
+### 5. Structure is useful, but complementary.
+
+SaSPNet and Signal-3L do **not** show that sequence information has become obsolete.
 
 Instead:
 
-``` text
-cluster / homology reduction
-        ↓
-train
-        ↓
-distant test proteins
-        ↓
-per-class metrics
-        ↓
-cleavage tolerance curves
+> **Sequence/PLM = foundation**  
+> **Structure = complementary signal**
+
+---
+
+### 6. The strongest research opportunity
+
+For a new project, a promising question is:
+
+> **Can we improve precise cleavage-site prediction on rare/unseen signal-peptide classes while remaining robust to N-terminal transmembrane helices and avoiding the computational cost of full structure prediction?**
+
+This combines the most persistent weaknesses identified across the five papers:
+
+```text
+Rare classes
+     +
+Cleavage uncertainty
+     +
+SP vs TM ambiguity
+     +
+Limited experimental annotations
+     +
+Distribution / species shift
+     ↓
+Better generalizable SP prediction
 ```
-
-The goal is to measure:
-
-> **generalization to proteins the model has not effectively seen
-> before.**
-
-------------------------------------------------------------------------
-
-# 33. Best metrics to emphasize in our manuscript
-
-If only a few numbers can be shown:
-
-  ------------------------------------------------------------------------
-                      Priority Metric                Why
-  ---------------------------- --------------------- ---------------------
-                             1 **Per-class cleavage  Directly exposes weak
-                               F1**                  SP types
-
-                             2 **Macro-average       Prevents dominant
-                               cleavage F1**         classes from hiding
-                                                     minority classes
-
-                             3 **MCC**               Strong balanced
-                                                     classification metric
-
-                             4 **SP/TM               Important biological
-                               false-positive rate** failure mode
-
-                             5 **Cleavage accuracy   Shows whether errors
-                               ±1/±2/±3**            are biologically
-                                                     close
-
-                             6 Weighted F1           Useful, but can hide
-                                                     minority classes
-  ------------------------------------------------------------------------
-
-------------------------------------------------------------------------
-
-# 34. A useful figure for our future project
-
-A very informative final figure would be:
-
-``` text
-                 Cleavage F1
-                     ↑
-1.0 ┤
-    │       ●
-0.9 ┤    ●     ●
-    │
-0.8 ┤
-    │
-0.7 ┤ ●
-    │
-0.6 ┤             ●
-    │
-0.5 ┤
-    └────────────────────────→
-       Sec/SPI  Sec/SPII  Tat/SPI
-```
-
-with separate curves for:
-
--   our model
--   SignalP6
--   TSignal
--   Signal-3L
--   possibly SaSPNet
-
-**But only when the underlying benchmark and metric definition are
-sufficiently comparable.**
-
-------------------------------------------------------------------------
-
-# 35. Final comparison
-
-  ---------------------------------------------------------------------------------------------------------
-  Dimension                    DeepSig     SignalP6               TSignal     SaSPNet     Signal-3L
-  ---------------------------- ----------- ---------------------- ----------- ----------- -----------------
-  Deep sequence learning       ✓           ✓                      ✓           ✓           ✓
-
-  Protein LM                   ---         ✓                      ✓           ✓           ✓
-
-  Structured prediction        ✓           ✓                      ---         ✓           ✓
-
-  Explicit five-class SP       ---         ✓                      ✓           ✓           partial/major 3
-  taxonomy                                                                                classes
-
-  TM-aware evaluation          ✓           ✓                      ✓           ✓           ✓
-
-  Rare-class focus             limited     **strong**             moderate    **very      **strong**
-                                                                              strong**    
-
-  3D structure                 ---         ---                    ---         **✓**       **✓**
-
-  Multimodal fusion            ---         ---                    ---         ✓           **✓
-                                                                                          co-attention**
-
-  Class-imbalance handling     ---         implicit/data-driven   ---         ✓ LDAM      ✓ imbalance-aware
-
-  Detailed cleavage evaluation ✓           ✓                      **✓**       ✓           **✓✓**
-
-  Independent/generalization   ✓           ✓                      ✓           ✓           **✓**
-  evaluation                                                                              
-  ---------------------------------------------------------------------------------------------------------
-
-------------------------------------------------------------------------
-
-# 36. Bottom line
-
-### DeepSig
-
-Solved an important earlier problem:
-
-> **deep sequence representation + better SP/TM discrimination +
-> structured cleavage prediction**
-
-### SignalP 6.0
-
-Solved another major problem:
-
-> **protein language models substantially improve rare SP-type
-> recognition**
-
-Especially:
-
-> **Sec/SPIII and Tat/SPII**
-
-### TSignal
-
-Asked:
-
-> **Can a Transformer learn SP structure instead of having it
-> hard-coded?**
-
-Answer:
-
-> Yes, and cleavage F1 improved modestly over SignalP 6.0.
-
-### SaSPNet
-
-Asked:
-
-> **Can 3D structure help the long-tail classes?**
-
-Answer:
-
-> Yes, especially for minority classes and minority-class cleavage
-> prediction.
-
-### Signal-3L 4.0
-
-Asked:
-
-> **Can sequence + structure be fused better, while explicitly
-> addressing imbalance?**
-
-Answer:
-
-> Yes. It improves overall classification and cleavage, with the largest
-> benchmark cleavage gain for **Sec/SPII**, while **Tat/SPI remains
-> substantially harder**.
-
-------------------------------------------------------------------------
-
-# 37. Final research insight
-
-The literature does **not** support:
-
-> "We just need a bigger model."
-
-Instead, the five papers suggest:
-
-``` text
-                    ┌─────────────────────────┐
-                    │  Protein language model │
-                    └────────────┬────────────┘
-                                 ↓
-                         strong baseline
-                                 │
-               ┌─────────────────┴─────────────────┐
-               ↓                                   ↓
-        rare-class problem                  cleavage problem
-               ↓                                   ↓
-       imbalance-aware ML                  better localization
-               │                                   │
-               └─────────────────┬─────────────────┘
-                                 ↓
-                         structural information
-                                 ↓
-                         multimodal models
-                                 ↓
-                    better difficult-case performance
-```
-
-So the strongest unresolved question for our project is:
-
-> **Can we improve cleavage-site localization and generalization for
-> difficult, evolutionarily distant eukaryotic signal peptides without
-> simply increasing model complexity?**
-
-That is more scientifically interesting than asking only:
-
-> "Can we increase overall SP accuracy?"
-
-------------------------------------------------------------------------
-
-# 38. Source papers used
-
-All five papers were provided in the project files:
-
-1.  **DeepSig.pdf**\
-    Savojardo et al. (2018), *DeepSig: deep learning improves signal
-    peptide detection in proteins.*
-
-2.  **SignalP6.pdf**\
-    Teufel et al. (2022), *SignalP 6.0 predicts all five types of signal
-    peptides using protein language models.*
-
-3.  **tSignal.pdf**\
-    *TSignal* (2023), Transformer/ProtBERT-based signal peptide and
-    cleavage-site prediction.
-
-4.  **StrucAware.pdf**\
-    SaSPNet / StrucAware (2026), structure-aware multimodal prediction
-    with emphasis on minority classes.
-
-5.  **Signal-3L.pdf**\
-    Piao et al. (2026), *Signal-3L 4.0*, multimodal sequence/structure
-    signal-peptide prediction with co-attention and imbalance-aware
-    learning.
-
-------------------------------------------------------------------------
-
-## Important comparison caveat
-
-**Metrics across different papers are not automatically comparable.**
-
-Differences include:
-
--   dataset composition
--   organism groups
--   SP classes
--   train/test splitting
--   sequence homology reduction
--   cross-validation vs blind testing
--   exact vs tolerance-based cleavage evaluation
--   macro vs weighted averaging
--   coupled vs conditional/unconditional cleavage evaluation
-
-Therefore, the safest interpretation is:
-
-> **Use within-paper improvements for quantitative claims, and use
-> cross-paper comparisons primarily to understand the evolution of the
-> research problem.**
