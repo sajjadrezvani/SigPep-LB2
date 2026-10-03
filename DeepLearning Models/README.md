@@ -1,16 +1,14 @@
 # Signal Peptide Prediction: Comparative Review of Five Key Papers
 
-> **Scope:** DeepSig (2018), SignalP 6.0 (2022), TSignal (2023), SaSPNet
+> Everying started from DeepSig analysis: [DeepSig_connected](https://www.connectedpapers.com/main/f5655e2d2c16774c33b17e5a151352a8dfd82255/DeepSig%3A-deep-learning-improves-signal-peptide-detection-in-proteins/graph)
+> So we analyze: DeepSig (2018), SignalP 6.0 (2022), TSignal (2023), SaSPNet
 > / StrucAware (2026), and Signal-3L 4.0 (2026).
 >
-> **Main focus:** What problem remains difficult after these advances,
-> especially **cleavage-site prediction and minority/low-resource SP
-> classes**?
-
+> To understand the main challenges and best architectures!
 
 ------------------------------------------------------------------------
 
-## 1. Executive conclusion
+## 1. overview:
 
 After reviewing the five uploaded papers, the strongest conclusion is
 **not** simply that Sec/SPI and Tat/SPI are the main bottlenecks.
