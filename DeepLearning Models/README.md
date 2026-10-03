@@ -7,6 +7,7 @@
 > especially **cleavage-site prediction and minority/low-resource SP
 > classes**?
 
+
 ------------------------------------------------------------------------
 
 ## 1. Executive conclusion
@@ -44,6 +45,8 @@ Signal-3L 4.0 provides particularly clean evidence: removing the
 structural branch reduces performance, but removing the sequence branch
 hurts more.
 
+<img width="680" height="782" alt="image" src="https://github.com/user-attachments/assets/34e66ded-0725-4ee5-b5f0-32726d321267" />
+
 ------------------------------------------------------------------------
 
 # 2. The five papers at a glance
@@ -76,6 +79,8 @@ hurts more.
                                    co-attention + CRF +   treatment                 classes
                                    imbalance-aware loss                             
   -------------------------------------------------------------------------------------------------------
+
+<img width="731" height="310" alt="image" src="https://github.com/user-attachments/assets/5a0c1f6e-fca2-45a6-ab63-89a08e341fa8" />
 
 ------------------------------------------------------------------------
 
@@ -128,10 +133,6 @@ making more errors in the exact cleavage position.
   Cleavage with tolerance Correct within ±1, ±2,  Easier and often more
                           ±3 residues             biologically realistic
 
-
-<img width="731" height="310" alt="image" src="https://github.com/user-attachments/assets/5a0c1f6e-fca2-45a6-ab63-89a08e341fa8" />
-
-<img width="680" height="782" alt="image" src="https://github.com/user-attachments/assets/34e66ded-0725-4ee5-b5f0-32726d321267" />
 
 ------------------------------------------------------------------------
 
