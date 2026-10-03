@@ -65,8 +65,8 @@ hurts more.
                                    sequence-to-sequence   structure and learns      harder than SP
                                                           label sequences directly  detection
 
-  **SaSPNet /                 2026 Sequence + PLM +       Explicitly targets        Complexity,
-  StrucAware**                     predicted 3D           minority SP classes using predicted-structure
+  **SaSPNet**                 2026 Sequence + PLM +       Explicitly targets        Complexity,
+                                   predicted 3D           minority SP classes using predicted-structure
                                    structure + GCN        structural information    dependence, remaining
                                                                                     rare-class errors
 
@@ -127,11 +127,11 @@ making more errors in the exact cleavage position.
 
   Cleavage with tolerance Correct within ±1, ±2,  Easier and often more
                           ±3 residues             biologically realistic
-  -----------------------------------------------------------------------
 
-The Bioinformatics II lecture material also emphasizes cleavage-site
-variability and the difficulty of distinguishing SPs from N-terminal
-transmembrane helices.
+
+<img width="731" height="310" alt="image" src="https://github.com/user-attachments/assets/5a0c1f6e-fca2-45a6-ab63-89a08e341fa8" />
+
+<img width="680" height="782" alt="image" src="https://github.com/user-attachments/assets/34e66ded-0725-4ee5-b5f0-32726d321267" />
 
 ------------------------------------------------------------------------
 
