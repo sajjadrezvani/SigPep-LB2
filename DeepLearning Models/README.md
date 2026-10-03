@@ -1,6 +1,7 @@
 # Signal Peptide Prediction: Comparative Review of Five Key Papers
 
 > Everying started from DeepSig analysis: [DeepSig_connected](https://www.connectedpapers.com/main/f5655e2d2c16774c33b17e5a151352a8dfd82255/DeepSig%3A-deep-learning-improves-signal-peptide-detection-in-proteins/graph)
+>
 > So we analyze: DeepSig (2018), SignalP 6.0 (2022), TSignal (2023), SaSPNet
 > / StrucAware (2026), and Signal-3L 4.0 (2026).
 >
