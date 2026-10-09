@@ -9,9 +9,8 @@
 
 --------------------------------
 
-# 1. Overview
 
-## 1.1 The evolution in one picture
+## one picture
 
 ```mermaid
 flowchart LR
@@ -87,7 +86,7 @@ This is the metric I would emphasize for this project because classification is 
 
 ---
 
-## 4.4 Signal-3L unconditional vs conditional cleavage prediction
+## Signal-3L unconditional vs conditional cleavage prediction
 
 Signal-3L separates two questions:
 
@@ -116,19 +115,6 @@ A representative imbalance is visible in SaSPNet:
 | Sec/SPIII | 0.34% |
 
 # summery
-
-| Question | DeepSig | SignalP 6.0 | TSignal | SaSPNet | Signal-3L |
-|---|---|---|---|---|---|
-| Can it detect SP? | ✓ | **✓✓** | **✓✓** | **✓✓** | **✓✓** |
-| Can it predict cleavage? | ✓ | ✓ | **✓** | **✓** | **✓** |
-| Handles multiple SP types? | Limited | **✓✓** | **✓✓** | **✓✓** | Major 3 types in benchmark |
-| Protein LM? | ✗ | ✓ | ✓ | ✓ | ✓ |
-| Learns without hard-coded N/H/C? | Partial | CRF structure | **✓✓** | ✓ | ✓ |
-| Uses 3D structure? | ✗ | ✗ | ✗ | **✓** | **✓** |
-| Explicit minority-class focus? | ✗ | **✓** | Partial | **✓✓** | **✓** |
-| Explicit imbalance loss? | ✗ | ✗ | ✗ | **✓** | **✓** |
-| Co-attention? | ✗ | ✗ | ✗ | ✗ | **✓** |
-| Strongest conceptual contribution | CNN sequence learning | PLM for rare classes | Data-driven labeling | Structure for minorities | Multimodal + imbalance-aware fusion |
 
 | Paper | Takeaway |
 |---|---|
