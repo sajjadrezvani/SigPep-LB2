@@ -11,6 +11,7 @@
 2.  peak position of Kyte–Doolittle hydropathy in the first 40 residues
 3. longest consecutive hydrophobic run and
 4. its start position in the N-terminal region.
+5. Position of that stretch	Starting position of the window with the highest mean hydrophobicity
 
 - amino-acid composition:
 1. Calculate amino-acid frequencies separately for residues 1–5, 6–15 and 16–30, with different step size and padding
