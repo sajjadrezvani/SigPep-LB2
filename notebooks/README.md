@@ -93,12 +93,13 @@ flowchart TD
    ```text
    PSWM = log(PSPM / Background)
    ```
-![Heatmap](results/download.png) 
+![Heatmap](../results/download.png) 
 10. **Score validation proteins**
     - Take up to the first 90 N-terminal residues.
     - Scan the sequence using a 15-residue sliding window.
     - Compute one score for each window.
     - Assign the maximum window score as the final protein score.
+
 
 11. **Select the optimal threshold**
     - Use the validation set.
