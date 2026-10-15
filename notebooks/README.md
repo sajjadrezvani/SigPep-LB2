@@ -100,6 +100,8 @@ flowchart TD
     - Compute one score for each window.
     - Assign the maximum window score as the final protein score.
 
+![Sequence_Scoring_Profile_for_Q8VCS0](../results/scoring.png)
+![Preciosion_Recall_Curve](../results/scoring.png)
 
 11. **Select the optimal threshold**
     - Use the validation set.
