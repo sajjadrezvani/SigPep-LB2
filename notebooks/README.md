@@ -16,8 +16,8 @@
 1. Calculate amino-acid frequencies separately for residues 1–5, 6–15 and 16–30, with different step size and padding
 
 - volume:
-1. small residue fraction (A+G+S)
-2. Proline fraction
+1. small residue fraction (A+G+S): 16–25, 21–30, 26–35
+2. Proline fraction: 6–15, 11–20, 16–25
 
 - Polarity:
 ???
