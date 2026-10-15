@@ -93,7 +93,7 @@ flowchart TD
    ```text
    PSWM = log(PSPM / Background)
    ```
-![Image Description](./results/download.png)
+![Image Description](results/download.png)
 10. **Score validation proteins**
     - Take up to the first 90 N-terminal residues.
     - Scan the sequence using a 15-residue sliding window.
