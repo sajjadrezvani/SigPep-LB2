@@ -1,58 +1,41 @@
+## Features:
+### Task 1: classification
+
+- Charge:
+1. K/R/H counts,
+2. estimated net charge and
+3. positive-residue fraction with different windows size (10) and different step size (1).
+
+- hydrophobicity:
+1. maximum, mean, standard deviation and
+2.  peak position of Kyte–Doolittle hydropathy in the first 40 residues
+3. longest consecutive hydrophobic run and
+4. its start position in the N-terminal region.
+
+- amino-acid composition:
+1. Calculate amino-acid frequencies separately for residues 1–5, 6–15 and 16–30, with different step size and padding
+
+- volume:
+1. small residue fraction (A+G+S)
+2. Proline fraction
+
+- Polarity:
+???
+
+### task 2: cleavage site:
+- 
+
+- ESM3 latent space vector (LAST)
+
+
+---
+
+
 ## von Heijne Signal Peptide Detection Workflow
 
 The project implements the von Heijne method for **Signal Peptide (SP) detection** using a Position-Specific Weight Matrix (PSWM).
 
 ### Workflow
-
-```mermaid
-flowchart TD
-
-    A["1. Prepare Dataset"] --> B["2. Split Dataset into 5 Folds"]
-
-    B --> C["3. Select Training / Validation / Test Sets"]
-
-    C --> D["4. Extract Cleavage-Site Contexts<br/>from Positive Training Proteins<br/>Positions: -13 to +2"]
-
-    D --> E["5. Build Count Matrix<br/>20 amino acids × 15 positions"]
-
-    E --> F["6. Add Pseudocounts<br/>Initialize every cell with 1"]
-
-    F --> G["7. Compute PSPM<br/>Count / (N + 20)"]
-
-    G --> H["8. Apply SwissProt<br/>Background Distribution"]
-
-    H --> I["9. Compute PSWM<br/>log(PSPM / Background)"]
-
-    I --> J["10. Score Validation Proteins"]
-
-    J --> K["Take first 90 N-terminal residues"]
-
-    K --> L["Slide 15-residue window"]
-
-    L --> M["Score each window"]
-
-    M --> N["Use maximum score<br/>as protein score"]
-
-    N --> O["11. Select Optimal Threshold<br/>using Precision-Recall / F1"]
-
-    O --> P["12. Score Test Proteins<br/>using the same PSWM"]
-
-    P --> Q["13. Classify Test Proteins"]
-
-    Q --> R{"Score ≥ Threshold?"}
-
-    R -->|Yes| S["SP"]
-    R -->|No| T["NO_SP"]
-
-    S --> U["14. Evaluate Predictions"]
-    T --> U
-
-    U --> V["15. Repeat for All 5 CV Runs"]
-
-    V --> W["16. Combine Results and<br/>Compute Final Performance"]
-```
-
-### Step-by-Step Pipeline
 
 1. **Prepare the dataset**
    - Positive proteins: proteins with a Signal Peptide.
