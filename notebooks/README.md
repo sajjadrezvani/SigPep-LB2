@@ -22,6 +22,7 @@
 
 - Polarity:
 ???
+- Secondary Structure
 
 ### task 2: cleavage site:
 - 
