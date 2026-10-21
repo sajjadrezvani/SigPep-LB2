@@ -1,3 +1,48 @@
+## Steps from modeling to Evaluation
+
+Step 1 — Finalize the models (pages 2–3)
+- Select SVM hyperparameters using 5-fold cross-validation on the training set.
+- Select the von Heijne decision threshold using the validation set.
+- Retrain both final models on the full training set.
+- Evaluate each model on the benchmark set once.
+
+
+
+
+Step 2 — Analyze prediction errors (page 4)
+- Identify false positives (FP): non-SP proteins predicted as SP.
+- Identify false negatives (FN): SP proteins predicted as non-SP.
+- Investigate whether errors are distributed differently across taxa and species.
+- Perform the same analysis for both methods and compare them.
+
+
+
+
+Step 3 — Investigate false positives (page 5)
+- Isolate benchmark false positives.
+- Use UniProtKB metadata to calculate the fraction of FPs with a TM helix within the first 90 residues.
+- Explain why hydrophobic TM helices can be confused with signal peptides.
+
+
+
+
+Step 4 — Investigate false negatives (pages 6–7)
+
+For von Heijne:
+- Generate a sequence logo for the missed signal peptides.
+- Compare it with the expected cleavage-site logo.
+For SVM:
+- Compare N-terminal amino-acid composition.
+- Compare signal-peptide lengths.
+- Compare other adopted features.
+- Use training positives, benchmark true positives, and benchmark false negatives as the three groups.
+
+Step 5 — Summarize the findings (page 8)
+
+Explain the errors rather than merely counting them. Discuss TM helices, cleavage-site context, N-terminal composition, and signal-peptide length.
+
+---
+
 ## Features:
 ### Task 1: classification
 
